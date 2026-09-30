@@ -8,8 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).parent / "vendor"))
-from rev6_2_json import BinAnim  # type: ignore
+from rev6_2_json import BinAnim # type: ignore
 
 IMMEDIATE_SET = 0
 IMMEDIATE_NONE = 1

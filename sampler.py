@@ -425,7 +425,7 @@ def _eval_color(
             f = (t - t0) / (t1 - t0)
             if kind == "bezier" and ctrl is not None:
                 f = _bezier_ease(f, *ctrl)
-            return tuple(int(round(a + (b - a) * f)) for a, b in zip(c0, c1))  # type: ignore[return-value]
+            return tuple(int(round(a + (b - a) * f)) for a, b in zip(c0, c1)) # type: ignore[return-value]
         prev = kf
     return _parse_color(prev.get("color", "FFFFFFFF"), default)
 

@@ -85,7 +85,7 @@ def write_msm_atlas_xml(
                 "w": str(w),
                 "h": str(h),
                 "pX": f"{px:.6f}",
-                "pY": f"{1 - py:.6f}",  # Y flip for MSM
+                "pY": f"{1 - py:.6f}",
                 "oX": str(ox),
                 "oY": str(oy),
                 "oW": str(ow),

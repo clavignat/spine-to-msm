@@ -48,7 +48,7 @@ class BinFile:
     def tell(self) -> int:
         if self._write:
             return self._pos
-        return self.fp.tell()  # type: ignore[union-attr]
+        return self.fp.tell() # type: ignore[union-attr]
 
     def seek(self, offset: int, whence: int = 0) -> int:
         if self._write:
@@ -61,13 +61,13 @@ class BinFile:
             if self._pos > len(self._buf):
                 self._buf.extend(b"\x00" * (self._pos - len(self._buf)))
             return self._pos
-        return self.fp.seek(offset, whence)  # type: ignore[union-attr]
+        return self.fp.seek(offset, whence) # type: ignore[union-attr]
 
     def __alignSeek(self, size: int) -> int:
         if self._write:
             pos = self._pos
         else:
-            pos = self.fp.tell()  # type: ignore[union-attr]
+            pos = self.fp.tell() # type: ignore[union-attr]
         off = pos % size
         if off:
             return self.seek(size - off, BinFile.WHENCE_CURRENT)
@@ -83,7 +83,7 @@ class BinFile:
             with open(self.filename, "wb") as f:
                 f.write(self._buf)
         else:
-            self.fp.close()  # type: ignore[union-attr]
+            self.fp.close() # type: ignore[union-attr]
 
     def _raw_write(self, data: bytes) -> int:
         end = self._pos + len(data)
@@ -95,7 +95,7 @@ class BinFile:
 
     def read(self, size: int) -> bytes:
         self.__alignSeek(size)
-        data = self.fp.read(size)  # type: ignore[union-attr]
+        data = self.fp.read(size) # type: ignore[union-attr]
         self.__emit_progress()
         return data
 
@@ -142,7 +142,7 @@ class BinFile:
         self.__alignSeek(size)
         if self._write:
             return self._raw_write(s.pack(val))
-        return self.fp.write(s.pack(val))  # type: ignore[union-attr]
+        return self.fp.write(s.pack(val)) # type: ignore[union-attr]
 
     def readUInt8(self) -> int:
         return _S_B.unpack(self.read(BinFile.INT8))[0]
@@ -167,7 +167,7 @@ class BinFile:
 
     def readString(self) -> str:
         string_len: int = self.readUInt32() - 1
-        raw: bytes = self.fp.read(string_len)  # type: ignore[union-attr]
+        raw: bytes = self.fp.read(string_len) # type: ignore[union-attr]
         self.__emit_progress()
         try:
             string: str = raw.decode("ascii")
@@ -203,6 +203,6 @@ class BinFile:
         if self._write:
             self._raw_write(raw)
         else:
-            self.fp.write(raw)  # type: ignore[union-attr]
+            self.fp.write(raw) # type: ignore[union-attr]
         self.__stringSeek(string)
         return len(raw)

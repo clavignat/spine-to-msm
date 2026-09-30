@@ -1,0 +1,7 @@
+# .gitignore
+__pycache__/
+*.bin
+*.json
+*.txt
+*.png
+*.xml

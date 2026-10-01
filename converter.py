@@ -214,6 +214,13 @@ def emit_atlas_xml(
     )
 
 
+def _combine_color(slot_color, att):
+    if att is None or isinstance(att, PointAttachment):
+        return slot_color
+    ac = getattr(att, "color", (255, 255, 255, 255))
+    return tuple(int(round(s * a / 255.0)) for s, a in zip(slot_color, ac))
+
+
 def spine_to_msm(
     spine_json: str | Path,
     spine_atlas: str | Path,
@@ -361,7 +368,13 @@ def spine_to_msm(
                 sst = sample["slots"][slot.name]
                 att = sst["attachment_obj"]
                 att_name = sst["attachment"]
-                r, g, b_, a = sst["color"]
+
+                if att is None:
+                    r, g, b_, a = sst["color"]
+                    frames.append(make_frame(t, opacity=0.0, rgb=(r, g, b_)))
+                    continue
+
+                r, g, b_, a = _combine_color(sst["color"], att)
 
                 if att is None:
                     frames.append(

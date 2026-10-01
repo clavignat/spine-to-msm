@@ -619,6 +619,8 @@ def sample_skeleton_at(
     if skin is None and skel.skins:
         skin = skel.skins[0]
 
+    default_skin = skel.skin("default")
+
     anim_slots = anim.get("slots", {}) or {}
     slot_states: dict[str, dict[str, Any]] = {}
     for slot in skel.slots:
@@ -644,8 +646,12 @@ def sample_skeleton_at(
                     color = _parse_color(cur["light"], color)
 
         att_obj = None
-        if att_name and skin and slot.name in skin.attachments:
-            att_obj = skin.attachments[slot.name].get(att_name)
+        if att_name:
+            for sk in (skin, default_skin):
+                if sk and slot.name in sk.attachments:
+                    att_obj = sk.attachments[slot.name].get(att_name)
+                    if att_obj is not None:
+                        break
 
         slot_states[slot.name] = {
             "bone": slot.bone,

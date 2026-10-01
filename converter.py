@@ -63,6 +63,8 @@ class AtlasPage:
         self.height = 0
         self.regions: dict[str, AtlasRegion] = {}
         self.sprites: list[dict] = []
+        self.fx = 1.0
+        self.fy = 1.0
 
 
 _IMG_EXT = re.compile(r"\.(png|jpe?g|webp|avif)$", re.I)
@@ -105,6 +107,7 @@ def parse_atlas(path: str | Path, *, rescale: bool = True) -> list[AtlasPage]:
                 f"note: {rp['image']} is {real[0]}x{real[1]}, scaling to x{fx:.4f} y{fy:.4f}"
             )
             page.sprites = rescale_sprites(page.sprites, fx, fy)
+            page.fx, page.fy = fx, fy
             page.width, page.height = real
         for s in page.sprites:
             xy = _parse_pair(s.get("xy", "0, 0"))
@@ -225,8 +228,25 @@ def spine_to_msm(
     target_height: float = 200.0,
     canvas: int = 480,
     origin: tuple[float, float] = (240.0, 225.0),
+    skin: Optional[str] = None,
 ) -> None:
     skel, data = load_skeleton(spine_json)
+
+    skin_name = skin or ("a0" if skel.skin("a0") else "default")
+    if skel.skin(skin_name) is None:
+        print(f"warning: skin '{skin_name}' not found, using default")
+        skin_name = "default"
+    print(f"note: exporting skin '{skin_name}'")
+    active_skin_obj = skel.skin(skin_name)
+    skin_bones = set(active_skin_obj.bones) if active_skin_obj else set()
+
+    active_bones: set[str] = set()
+    for b in skel.bones:
+        parent_ok = b.parent is None or b.parent in active_bones
+        if parent_ok and (not b.skin_only or b.name in skin_bones):
+            active_bones.add(b.name)
+    bones = [b for b in skel.bones if b.name in active_bones]
+    slots = [s for s in skel.slots if s.bone in active_bones]
     S = scale if scale else target_height / (skel.height or 1000.0)
     pages = parse_atlas(spine_atlas)
     if not pages:
@@ -256,10 +276,10 @@ def spine_to_msm(
     bone_layer_id: dict[str, int] = {}
     slot_layer_id: dict[str, int] = {}
     nid = 0
-    for b in skel.bones:
+    for b in bones:
         bone_layer_id[b.name] = nid
         nid += 1
-    for s in skel.slots:
+    for s in slots:
         slot_layer_id[s.name] = nid
         nid += 1
 
@@ -279,10 +299,12 @@ def spine_to_msm(
         if times[-1] < duration - 1e-9:
             times.append(duration)
 
-        samples = [sample_skeleton_at(skel, anim, t) for t in times]
+        samples = [
+            sample_skeleton_at(skel, anim, t, active_skin=skin_name) for t in times
+        ]
 
         bone_layers: list[dict] = []
-        for bone in skel.bones:
+        for bone in bones:
             anim_bone = (anim.get("bones", {}) or {}).get(bone.name)
             frames = []
             for t in times:
@@ -327,7 +349,7 @@ def spine_to_msm(
             )
 
         slot_layers: list[dict] = []
-        for slot in skel.slots:
+        for slot in slots:
             frames = []
             last_sprite: Optional[str] = None
             anchor_x = 0.0

@@ -32,6 +32,11 @@ def main():
     p.add_argument(
         "--target-height", type=float, default=200.0, help="Monster height in canvas px"
     )
+    p.add_argument(
+        "--skin",
+        default=None,
+        help='Skin to export (default: "a0" if present, else "default")',
+    )
     args = p.parse_args()
 
     from converter import spine_to_msm
@@ -47,6 +52,7 @@ def main():
         hires=args.hires,
         scale=args.scale,
         target_height=args.target_height,
+        skin=args.skin,
     )
     print(f"Wrote {args.out_bin}")
     print(f"Wrote {args.out_xml}")

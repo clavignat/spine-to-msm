@@ -6,9 +6,10 @@ from __future__ import annotations
 
 import math
 import re
-import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Optional
+
+from atlas_writer import _parse_atlas, write_atlas_xml, is_rotated, rescale_sprites
 
 from writer import (
     make_source,
@@ -28,6 +29,8 @@ from sampler import (
     MeshAttachment,
     PointAttachment,
 )
+
+TRIM_AWARE_ANCHOR = False
 
 
 class AtlasRegion:
@@ -59,6 +62,7 @@ class AtlasPage:
         self.width = 0
         self.height = 0
         self.regions: dict[str, AtlasRegion] = {}
+        self.sprites: list[dict] = []
 
 
 _IMG_EXT = re.compile(r"\.(png|jpe?g|webp|avif)$", re.I)
@@ -71,127 +75,58 @@ def _parse_pair(s: str) -> tuple[int, int]:
     return 0, 0
 
 
-def parse_spine_atlas(path: str | Path) -> list[AtlasPage]:
-    text = Path(path).read_text(encoding="utf-8", errors="replace")
-    lines = text.splitlines()
+def _actual_png_size(atlas_path: Path, image: str) -> Optional[tuple[int, int]]:
+    """Size of the page image next to the atlas file, if it can be read."""
+    img = atlas_path.parent / image
+    if not img.exists():
+        return None
+    try:
+        from PIL import Image
 
+        with Image.open(img) as im:
+            return im.size
+    except Exception:
+        return None
+
+
+def parse_atlas(path: str | Path, *, rescale: bool = True) -> list[AtlasPage]:
+    path = Path(path)
+    raw_pages = _parse_atlas(path)
     pages: list[AtlasPage] = []
-    page: Optional[AtlasPage] = None
-    region: Optional[dict] = None
-
-    def flush_region():
-        nonlocal region
-        if region is None or page is None:
-            region = None
-            return
-        name = region.get("name")
-        if not name:
-            region = None
-            return
-        size = region.get("size", (0, 0))
-        orig = region.get("orig", size)
-        off = region.get("offset", (0, 0))
-        xy = region.get("xy", (0, 0))
-        page.regions[name] = AtlasRegion(
-            name,
-            int(xy[0]),
-            int(xy[1]),
-            int(size[0]),
-            int(size[1]),
-            int(orig[0]),
-            int(orig[1]),
-            int(off[0]),
-            int(off[1]),
-            bool(region.get("rotate", False)),
-        )
-        region = None
-
-    for raw in lines:
-        if not raw.strip():
-            continue
-
-        if ":" in raw:
-            key, _, value = raw.partition(":")
-            key = key.strip().lower()
-            value = value.strip()
-            if region is not None:
-                if key == "rotate":
-                    region["rotate"] = value.lower() == "true"
-                elif key == "xy":
-                    region["xy"] = _parse_pair(value)
-                elif key == "size":
-                    region["size"] = _parse_pair(value)
-                elif key == "orig":
-                    region["orig"] = _parse_pair(value)
-                elif key == "offset":
-                    region["offset"] = _parse_pair(value)
-            elif page is not None:
-                if key == "size":
-                    w, h = _parse_pair(value)
-                    page.width, page.height = w, h
-            continue
-
-        if _IMG_EXT.search(raw):
-            flush_region()
-            page = AtlasPage(image=raw.strip())
-            pages.append(page)
-            continue
-
-        flush_region()
-        if page is not None:
-            region = {"name": raw.strip()}
-
-    flush_region()
+    for rp in raw_pages:
+        page = AtlasPage(image=rp["image"])
+        page.width = rp["width"]
+        page.height = rp["height"]
+        page.sprites = rp["sprites"]
+        real = _actual_png_size(path, rp["image"]) if rescale else None
+        if real and real != (page.width, page.height):
+            fx, fy = real[0] / page.width, real[1] / page.height
+            print(
+                f"note: {rp['image']} is {real[0]}x{real[1]} but the atlas says "
+                f"{page.width}x{page.height}; rescaling coordinates "
+                f"(x{fx:.4f}, y{fy:.4f})"
+            )
+            page.sprites = rescale_sprites(page.sprites, fx, fy)
+            page.width, page.height = real
+        for s in page.sprites:
+            xy = _parse_pair(s.get("xy", "0, 0"))
+            size = _parse_pair(s.get("size", "0, 0"))
+            orig = _parse_pair(s.get("orig", f"{size[0]},{size[1]}"))
+            off = _parse_pair(s.get("offset", "0, 0"))
+            page.regions[s["name"]] = AtlasRegion(
+                s["name"],
+                xy[0],
+                xy[1],
+                size[0],
+                size[1],
+                orig[0],
+                orig[1],
+                off[0],
+                off[1],
+                is_rotated(s),
+            )
+        pages.append(page)
     return pages
-
-
-def emit_atlas_xml(
-    out_path: str | Path, page: AtlasPage, *, hires: bool = False
-) -> None:
-    root = ET.Element(
-        "TextureAtlas",
-        {
-            "imagePath": page.image,
-            "width": str(page.width),
-            "height": str(page.height),
-            "hires": "true" if hires else "false",
-        },
-    )
-    for r in page.regions.values():
-        w = r.h if r.rotated else r.w
-        h = r.w if r.rotated else r.h
-        attrib = {
-            "n": r.name,
-            "x": str(r.x),
-            "y": str(r.y),
-            "w": str(w),
-            "h": str(h),
-            "pX": "0.5",
-            "pY": "0.5",
-            "oX": str(r.offset_x),
-            "oY": str(r.offset_y),
-            "oW": str(r.orig_w),
-            "oH": str(r.orig_h),
-        }
-        if r.rotated:
-            attrib["r"] = "y"
-        ET.SubElement(root, "sprite", attrib)
-
-    def indent(e, lvl=0):
-        pad = "\n" + "    " * lvl
-        if len(e):
-            if not e.text or not e.text.strip():
-                e.text = pad + "    "
-            for c in e:
-                indent(c, lvl + 1)
-            if not e.tail or not e.tail.strip():
-                e.tail = pad
-        else:
-            if lvl and (not e.tail or not e.tail.strip()):
-                e.tail = pad
-
-    indent(root)
-    ET.ElementTree(root).write(out_path, encoding="utf-8", xml_declaration=True)
 
 
 def _find_page_and_region(pages, att_name: str, att_path: Optional[str]):
@@ -206,6 +141,16 @@ def _find_page_and_region(pages, att_name: str, att_path: Optional[str]):
             if c in page.regions:
                 return i, page.regions[c]
     return None, None
+
+
+def _region_anchor(region: AtlasRegion) -> tuple[float, float]:
+    if not TRIM_AWARE_ANCHOR:
+        return region.w * 0.5, region.h * 0.5
+    off_top = region.orig_h - region.h - region.offset_y
+    return (
+        region.orig_w * 0.5 - region.offset_x,
+        region.orig_h * 0.5 - off_top,
+    )
 
 
 def _decompose_local_matrix(a, b, c, d, e, f):
@@ -252,6 +197,22 @@ def _animation_duration(anim: dict) -> float:
     return mx
 
 
+def emit_atlas_xml(
+    out_path: str | Path, page: AtlasPage, *, hires: bool = False
+) -> None:
+    pivot_lookup: dict[str, tuple[float, float]] = {}
+    for name in page.regions.keys():
+        pivot_lookup[name] = (0.5, 0.5)
+    write_atlas_xml(
+        out_path,
+        page.image,
+        page.width,
+        page.height,
+        page.sprites,
+        pivot_lookup,
+    )
+
+
 def spine_to_msm(
     spine_json: str | Path,
     spine_atlas: str | Path,
@@ -269,7 +230,7 @@ def spine_to_msm(
 ) -> None:
     skel, data = load_skeleton(spine_json)
     S = scale if scale else target_height / (skel.height or 1000.0)
-    pages = parse_spine_atlas(spine_atlas)
+    pages = parse_atlas(spine_atlas)
     if not pages:
         raise RuntimeError(f"No pages found in atlas: {spine_atlas}")
 
@@ -413,8 +374,7 @@ def spine_to_msm(
                 )
 
                 if region is not None and not have_anchor:
-                    anchor_x = region.offset_x + region.w * 0.5
-                    anchor_y = region.offset_y + region.h * 0.5
+                    anchor_x, anchor_y = _region_anchor(region)
                     have_anchor = True
                 if page_idx is not None:
                     src_index = page_to_src[page_idx]

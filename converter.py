@@ -158,12 +158,14 @@ def emit_atlas_xml(
         },
     )
     for r in page.regions.values():
+        w = r.h if r.rotated else r.w
+        h = r.w if r.rotated else r.h
         attrib = {
             "n": r.name,
             "x": str(r.x),
             "y": str(r.y),
-            "w": str(r.w),
-            "h": str(r.h),
+            "w": str(w),
+            "h": str(h),
             "pX": "0.5",
             "pY": "0.5",
             "oX": str(r.offset_x),
@@ -453,7 +455,6 @@ def spine_to_msm(
                 )
             )
 
-        # Boo gaa gaa
         slot_layers.reverse()
 
         anims_out.append(

@@ -3,8 +3,30 @@
 #
 
 import re
-import xml.etree.ElementTree as ET
 from pathlib import Path
+
+HEADER = """<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with TexturePacker http://www.codeandweb.com/texturepacker-->
+<!-- $TexturePacker:SmartUpdate:8565276fa92a4fe44581a02a006430e2:16b7ee99a48be8f1944cd7c457cfda09:442a3893a89de7a83bd8103f362c1668$ -->
+<!--Format:
+n  => name of the sprite
+x  => sprite x pos in texture
+y  => sprite y pos in texture
+w  => sprite width (may be trimmed)
+h  => sprite height (may be trimmed)
+pX => x pos of the pivot point (relative to sprite width)
+pY => y pos of the pivot point (relative to sprite height)
+oX => sprite's x-corner offset (only available if trimmed)
+oY => sprite's y-corner offset (only available if trimmed)
+oW => sprite's original width (only available if trimmed)
+oH => sprite's original height (only available if trimmed)
+r => 'y' only set if sprite is rotated
+with polygon mode enabled:
+vertices   => points in sprite coordinate system (x0,y0,x1,y1,x2,y2, ...)
+verticesUV => points in sheet coordinate system (x0,y0,x1,y1,x2,y2, ...)
+triangles  => sprite triangulation, 3 vertex indices per triangle
+-->
+"""
 
 
 def parse_spine_atlas(path: str | Path) -> list[dict]:
@@ -27,7 +49,6 @@ def parse_spine_atlas(path: str | Path) -> list[dict]:
             cur_page["width"], cur_page["height"] = int(w), int(h)
             i += 1
             continue
-        # otherwise it's a region block starting with the region name!!
         if cur_page is None:
             i += 1
             continue
@@ -56,14 +77,9 @@ def write_msm_atlas_xml(
     sprites: list[dict],
     pivot_lookup: dict[str, tuple[float, float]],
 ) -> None:
-    root = ET.Element(
-        "TextureAtlas",
-        {
-            "imagePath": image_filename,
-            "width": str(page_width),
-            "height": str(page_height),
-            "hires": "false",
-        },
+    lines: list[str] = []
+    lines.append(
+        f'<TextureAtlas imagePath="gfx/monsters/{image_filename}" width="{page_width}" height="{page_height}" hires="false">'
     )
     for s in sprites:
         xy = s.get("xy", "0, 0").split(",")
@@ -74,22 +90,17 @@ def write_msm_atlas_xml(
         w, h = int(sz[0]), int(sz[1])
         ow, oh = int(orig[0]), int(orig[1])
         ox, oy = int(offset[0]), int(offset[1])
+        rotated = s.get("rotate", "false").strip().lower() == "true"
+        if rotated:
+            w, h = h, w
         px, py = pivot_lookup.get(s["name"], (0.5, 0.5))
-        ET.SubElement(
-            root,
-            "sprite",
-            {
-                "n": s["name"],
-                "x": str(x),
-                "y": str(y),
-                "w": str(w),
-                "h": str(h),
-                "pX": f"{px:.6f}",
-                "pY": f"{1 - py:.6f}",
-                "oX": str(ox),
-                "oY": str(oy),
-                "oW": str(ow),
-                "oH": str(oh),
-            },
+        r_attr = ' r="y"' if rotated else ""
+        lines.append(
+            f'    <sprite n="{s["name"]}" x="{x}" y="{y}" w="{w}" h="{h}" '
+            f'pX="{px:.6f}" pY="{1 - py:.6f}" oX="{ox}" oY="{oy}" '
+            f'oW="{ow}" oH="{oh}"{r_attr} />'
         )
-    ET.ElementTree(root).write(out_path, encoding="utf-8", xml_declaration=True)
+    lines.append("</TextureAtlas>")
+    lines.append("")
+
+    Path(out_path).write_text(HEADER + "\n".join(lines), encoding="utf-8")

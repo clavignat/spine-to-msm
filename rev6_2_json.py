@@ -19,7 +19,7 @@ except ImportError:
     if path_str not in sys.path:
         sys.path.insert(0, path_str)
     try:
-        from binfile import BinFile # type: ignore
+        from binfile import BinFile  # type: ignore
     except ImportError as import_exc:
         raise import_exc
 

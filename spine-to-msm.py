@@ -1,4 +1,7 @@
+#
 # spine-to-msm.py
+#
+
 import argparse
 from pathlib import Path
 

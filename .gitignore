@@ -7,3 +7,5 @@ __pycache__/
 *.xml
 !.github/
 !.github/discord.png
+*.avif
+.vscode/

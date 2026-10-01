@@ -102,9 +102,7 @@ def parse_atlas(path: str | Path, *, rescale: bool = True) -> list[AtlasPage]:
         if real and real != (page.width, page.height):
             fx, fy = real[0] / page.width, real[1] / page.height
             print(
-                f"note: {rp['image']} is {real[0]}x{real[1]} but the atlas says "
-                f"{page.width}x{page.height}; rescaling coordinates "
-                f"(x{fx:.4f}, y{fy:.4f})"
+                f"note: {rp['image']} is {real[0]}x{real[1]}, scaling to x{fx:.4f} y{fy:.4f}"
             )
             page.sprites = rescale_sprites(page.sprites, fx, fy)
             page.width, page.height = real

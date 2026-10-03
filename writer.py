@@ -113,7 +113,7 @@ def make_animation(
     width: int,
     height: int,
     layers: list[dict],
-    loop_offset: float = -1.0,
+    loop_offset: float = 0.0,
     centered: int = 1,
 ) -> dict[str, Any]:
     return {

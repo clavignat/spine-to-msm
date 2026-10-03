@@ -346,6 +346,8 @@ def spine_to_msm(
                         rot += 360.0
                 prev_rot = rot
 
+                rot = ((rot + 180.0) % 360.0) - 180.0
+
                 if not bone.parent:
                     px = origin[0] + px * S
                     py = origin[1] + py * S
@@ -473,7 +475,6 @@ def spine_to_msm(
                 width=canvas,
                 height=canvas,
                 layers=bone_layers + slot_layers,
-                loop_offset=0.0,
                 centered=1,
             )
         )

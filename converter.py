@@ -327,6 +327,12 @@ def spine_to_msm(
                     pose["shear_y"],
                 )
                 (px, py), rot, (sx, sy) = _decompose_local_matrix(a, b_, c, d, e, f)
+
+                if sx < 0.0:
+                    sx = -sx
+                    sy = -sy
+                    rot += 180.0
+
                 if y_flip:
                     py = -py
                     rot = -rot
@@ -345,6 +351,7 @@ def spine_to_msm(
                     py = origin[1] + py * S
                     sx *= S
                     sy *= S
+
                 frames.append(
                     make_frame(
                         t,

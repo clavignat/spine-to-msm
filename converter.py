@@ -393,16 +393,6 @@ def spine_to_msm(
 
                 r, g, b_, a = _combine_color(sst["color"], att)
 
-                if att is None:
-                    frames.append(
-                        make_frame(
-                            t,
-                            opacity=0.0,
-                            rgb=(r, g, b_),
-                        )
-                    )
-                    continue
-
                 if isinstance(att, (RegionAttachment, PointAttachment)):
                     ax, ay = att.x, att.y
                     arot = att.rotation

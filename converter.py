@@ -466,6 +466,7 @@ def spine_to_msm(
                 width=canvas,
                 height=canvas,
                 layers=bone_layers + slot_layers,
+                loop_offset=0.0,
                 centered=1,
             )
         )

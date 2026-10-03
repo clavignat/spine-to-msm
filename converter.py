@@ -313,6 +313,7 @@ def spine_to_msm(
         for bone in bones:
             anim_bone = (anim.get("bones", {}) or {}).get(bone.name)
             frames = []
+            prev_rot: Optional[float] = None
             for t in times:
                 pose = _local_pose(bone, anim_bone, t)
                 a, b_, c, d, e, f = _bone_local_matrix(
@@ -329,6 +330,16 @@ def spine_to_msm(
                 if y_flip:
                     py = -py
                     rot = -rot
+
+                # Spine handles rotation WAY differently than MSM does
+                # So we do whatever this monstrosity is
+                if prev_rot is not None:
+                    while rot - prev_rot > 180.0:
+                        rot -= 360.0
+                    while rot - prev_rot < -180.0:
+                        rot += 360.0
+                prev_rot = rot
+
                 if not bone.parent:
                     px = origin[0] + px * S
                     py = origin[1] + py * S

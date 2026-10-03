@@ -4,6 +4,8 @@ A converter from Spine2D to the MSM binary format or whatever idk
 
 Tested with [NPS](https://github.com/Next-Private-Server/Next-Private-Server)
 
+**ONLY SPINE 3.8 SKELETONS WORK FOR NOW!!**
+
 ![gif](.github/gif.gif?raw=true)
 
 ## Usage

@@ -2,7 +2,7 @@
 
 A converter from Spine2D to the MSM binary format or whatever idk
 
-Tested with [NPS](https://github.com/Next-Private-Server/Next-Private-Server)
+Tested with [NPS](https://github.com/Next-Private-Server/Next-Private-Server), should work with everything else
 
 **ONLY SPINE 3.8 SKELETONS WORK FOR NOW!!**
 

@@ -9,3 +9,6 @@ __pycache__/
 !.github/discord.png
 *.avif
 .vscode/
+build/
+dist/
+*.spec

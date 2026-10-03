@@ -35,7 +35,6 @@ def main():
     p.add_argument(
         "--skin",
         default=None,
-        help='Skin to export (default: "a0" if present, else "default")',
     )
     args = p.parse_args()
 

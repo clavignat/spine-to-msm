@@ -78,7 +78,6 @@ def _parse_pair(s: str) -> tuple[int, int]:
 
 
 def _actual_png_size(atlas_path: Path, image: str) -> Optional[tuple[int, int]]:
-    """Size of the page image next to the atlas file, if it can be read."""
     img = atlas_path.parent / image
     if not img.exists():
         return None

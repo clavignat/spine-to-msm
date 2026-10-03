@@ -76,6 +76,7 @@ def _parse_atlas(path: str | Path) -> list[dict]:
                 cur_page["width"], cur_page["height"] = int(w), int(h)
                 i += 1
                 continue
+            # otherwise it's a region block starting with the region name!!
             if key in _PAGE_KEYS:
                 i += 1
                 continue

@@ -433,6 +433,8 @@ def _eval_color(
 def _eval_attachment(keys: list[dict], t: float) -> Optional[str]:
     if not keys:
         return None
+    if t < float(keys[0].get("time", 0.0)):
+        return None
     cur: Optional[str] = keys[0].get("name")
     for kf in keys:
         if float(kf.get("time", 0.0)) <= t:

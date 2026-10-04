@@ -32,8 +32,6 @@ from sampler import (
     PointAttachment,
 )
 
-TRIM_AWARE_ANCHOR = False
-
 
 class AtlasRegion:
     __slots__ = (
@@ -67,9 +65,6 @@ class AtlasPage:
         self.sprites: list[dict] = []
         self.fx = 1.0
         self.fy = 1.0
-
-
-_IMG_EXT = re.compile(r"\.(png|jpe?g|webp|avif)$", re.I)
 
 
 def _parse_pair(s: str) -> tuple[int, int]:
@@ -146,13 +141,7 @@ def _find_page_and_region(pages, att_name: str, att_path: Optional[str]):
 
 
 def _region_anchor(region: AtlasRegion) -> tuple[float, float]:
-    if not TRIM_AWARE_ANCHOR:
-        return region.w * 0.5, region.h * 0.5
-    off_top = region.orig_h - region.h - region.offset_y
-    return (
-        region.orig_w * 0.5 - region.offset_x,
-        region.orig_h * 0.5 - off_top,
-    )
+    return region.orig_w * 0.5, region.orig_h * 0.5
 
 
 def _decompose_local_matrix(a, b, c, d, e, f):

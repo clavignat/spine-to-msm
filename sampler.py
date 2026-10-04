@@ -430,14 +430,19 @@ def _eval_color(
     return _parse_color(prev.get("color", "FFFFFFFF"), default)
 
 
-def _eval_attachment(keys: list[dict], t: float) -> Optional[str]:
+def _eval_attachment(keys: list[dict], t: float, fps: float = 30.0) -> Optional[str]:
     if not keys:
         return None
-    if t < float(keys[0].get("time", 0.0)):
+
+    def snap(kf: dict) -> float:
+        raw = float(kf.get("time", 0.0))
+        return round(raw * fps) / fps
+
+    if t < snap(keys[0]):
         return None
     cur: Optional[str] = keys[0].get("name")
     for kf in keys:
-        if float(kf.get("time", 0.0)) <= t:
+        if snap(kf) <= t:
             cur = kf.get("name")
         else:
             break
@@ -587,6 +592,7 @@ def sample_skeleton_at(
     t: float,
     *,
     active_skin: Optional[str] = None,
+    fps: float = 30.0,
 ) -> dict[str, Any]:
     bones_by_name = {b.name: b for b in skel.bones}
     anim_bones = anim.get("bones", {}) or {}
@@ -630,7 +636,7 @@ def sample_skeleton_at(
         color = slot.color
         anim_slot = anim_slots.get(slot.name, {})
         if "attachment" in anim_slot:
-            swapped = _eval_attachment(anim_slot["attachment"], t)
+            swapped = _eval_attachment(anim_slot["attachment"], t, fps=fps)
             if swapped is not None:
                 att_name = swapped or None
         if "color" in anim_slot:
@@ -694,28 +700,3 @@ def sample_skeleton_at(
         order = [s.name for s in skel.slots]
 
     return {"bones": world, "slots": slot_states, "draworder": order}
-
-
-def bake_animation(
-    skel: Skeleton,
-    anim_name: str,
-    data: dict,
-    *,
-    fps: float = 30.0,
-    active_skin: Optional[str] = None,
-) -> tuple[list[float], list[dict]]:
-    animations = data.get("animations", {}) or {}
-    anim = animations.get(anim_name)
-    if anim is None:
-        raise KeyError(f"Animation '{anim_name}' not found")
-
-    duration = float(anim.get("duration", 0.0))
-    n_frames = max(1, int(round(duration * fps)) + 1)
-    times = [i / fps for i in range(n_frames)]
-    if times[-1] < duration:
-        times.append(duration)
-
-    samples = [
-        sample_skeleton_at(skel, anim, t, active_skin=active_skin) for t in times
-    ]
-    return times, samples

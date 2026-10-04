@@ -227,7 +227,7 @@ def spine_to_msm(
     out_xml: str | Path,
     *,
     anim_names: Optional[list[str]] = None,
-    fps: float = 24.0,
+    fps: float = 30.0,
     y_flip: bool = True,
     hires: bool = False,
     scale: Optional[float] = None,
@@ -306,7 +306,7 @@ def spine_to_msm(
             times.append(duration)
 
         samples = [
-            sample_skeleton_at(skel, anim, t, active_skin=skin_name) for t in times
+            sample_skeleton_at(skel, anim, t, active_skin=skin_name, fps=fps) for t in times
         ]
 
         bone_layers: list[dict] = []

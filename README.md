@@ -13,10 +13,9 @@ Tested with [NPS](https://github.com/Next-Private-Server/Next-Private-Server) an
 ## Usage
 
 1. Grab the exported Spine JSON+atlas (EXPORTED WITH ROTATION OFF FOR ATLAS!), preferrably with **Premultiplied Alpha** off for rev6, and on for rev2
-2. Run the tool like `spine-to-msm.py "project.json" project.atlas.txt --out-bin project.bin --out-xml project.xml --scale 0.17`
-2.5 If you want to use the old bin format like rev2, just add `--rev 2` to the params
+2. Run the tool like `spine-to-msm.py "project.json" project.atlas.txt --out-bin project.bin --out-xml project.xml --scale 0.17`. If you want to use the old .bin format like rev2, just add `--rev 2` to the params
 3. Convert the PNG spritesheet into AVIF to work in-game
-4. Add it to the game or idk whatever you're supposed to do after i just use NPS to replace the binary file, for those who don't understand - put the xml in `xml_resources/`, and bin in `xml_bin/` however you'd also need to add it to the server or you have to replace a monster's existing binary file so if you do just rename the bin file to match an existing monster
+4. Add it to the game or idk whatever you're supposed to do after i just use NPS to replace the binary file, for those who don't understand - put the xml in `xml_resources/`, and .bin in `xml_bin/` however you'd also need to add it to the server or you have to replace a monster's existing binary file so if you do just rename the .bin file to match an existing monster
 
 The animations should follow the same naming scheme as MSM anims do, otherwise they won't work in-game!
 

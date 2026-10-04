@@ -8,7 +8,7 @@ Tested with [NPS](https://github.com/Next-Private-Server/Next-Private-Server), s
 
 ![gif](.github/gif.gif?raw=true)
 
-<sup><sub>* Created by Gooseberry</sub></sup>
+<sup><sub>* Monster made by Gooseberry</sub></sup>
 
 ## Usage
 

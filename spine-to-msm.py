@@ -35,6 +35,7 @@ def main():
     p.add_argument(
         "--skin",
         default=None,
+        help='Default skeleton skin'
     )
     args = p.parse_args()
 

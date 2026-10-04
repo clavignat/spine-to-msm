@@ -7,6 +7,7 @@ Tested with [NPS](https://github.com/Next-Private-Server/Next-Private-Server), s
 **ONLY SPINE 3.8 SKELETONS WORK FOR NOW!!**
 
 ![gif](.github/gif.gif?raw=true)
+
 <sup><sub>* Created by Gooseberry</sub></sup>
 
 ## Usage

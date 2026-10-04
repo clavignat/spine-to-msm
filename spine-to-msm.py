@@ -16,6 +16,9 @@ def main():
     p.add_argument("-o", "--out-bin", type=Path, required=True, help="Destination .bin")
     p.add_argument("--out-xml", type=Path, required=True, help="Destination atlas XML")
     p.add_argument(
+        "--rev", type=int, default=6, choices=[2, 6], help="Target revision"
+    )
+    p.add_argument(
         "--anim",
         action="append",
         default=None,
@@ -32,11 +35,7 @@ def main():
     p.add_argument(
         "--target-height", type=float, default=200.0, help="Monster height in canvas px"
     )
-    p.add_argument(
-        "--skin",
-        default=None,
-        help='Default skeleton skin'
-    )
+    p.add_argument("--skin", default=None, help="Default skeleton skin")
     args = p.parse_args()
 
     from converter import spine_to_msm
@@ -53,6 +52,7 @@ def main():
         scale=args.scale,
         target_height=args.target_height,
         skin=args.skin,
+        rev=args.rev,
     )
     print(f"Wrote {args.out_bin}")
     print(f"Wrote {args.out_xml}")

@@ -226,6 +226,7 @@ def spine_to_msm(
     canvas: int = 480,
     origin: tuple[float, float] = (240.0, 225.0),
     skin: Optional[str] = None,
+    rev: int = 6,
 ) -> None:
     skel, data = load_skeleton(spine_json)
 
@@ -481,4 +482,4 @@ def spine_to_msm(
             )
         )
 
-    write_bin(out_bin, source_entries, anims_out)
+    write_bin(out_bin, source_entries, anims_out, rev=rev)

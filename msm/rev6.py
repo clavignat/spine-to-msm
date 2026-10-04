@@ -1,5 +1,5 @@
 #
-# rev6_2_json.py
+# rev6.py
 # Taken from Aniviewer
 #
 
@@ -639,6 +639,17 @@ def main() -> None:
             anim.save(f"{file}.bin")
         case _:
             print(usage)
+
+
+REV = 6
+
+
+def load_bin(path: str) -> dict:
+    return BinAnim.from_file(path).to_dict()
+
+
+def save_bin(payload: dict, path: str) -> None:
+    BinAnim.from_dict(payload).save(path)
 
 
 if __name__ == "__main__":

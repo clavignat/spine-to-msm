@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from rev6_2_json import BinAnim  # type: ignore
+from msm import rev6
 
 IMMEDIATE_SET = 0
 IMMEDIATE_NONE = 1
@@ -127,10 +127,12 @@ def make_animation(
     }
 
 
-def write_bin(
-    output_path: str | Path,
-    sources: list[dict],
-    anims: list[dict],
-) -> None:
-    payload = {"rev": 6, "blend_version": 2, "sources": sources, "anims": anims}
-    BinAnim.from_dict(payload).save(str(output_path))
+def write_bin(output_path, sources, anims, rev: int = 6) -> None:
+    from msm.dispatch import REVS
+    payload = {
+        "rev": rev,
+        "blend_version": 2,
+        "sources": sources,
+        "anims": anims,
+    }
+    REVS[rev].save_bin(payload, str(output_path))

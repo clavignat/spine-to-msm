@@ -25,6 +25,8 @@ from sampler import (
     sample_skeleton_at,
     _bone_local_matrix,
     _local_pose,
+    _mat_invert,
+    _mat_mul,
     RegionAttachment,
     MeshAttachment,
     PointAttachment,
@@ -253,6 +255,7 @@ def spine_to_msm(
             active_bones.add(b.name)
     bones = [b for b in skel.bones if b.name in active_bones]
     slots = [s for s in skel.slots if s.bone in active_bones]
+    ik_bones = {n for c in skel.ik for n in c.bones}
     S = scale if scale else target_height / (skel.height or 1000.0)
     pages = parse_atlas(spine_atlas)
     if not pages:
@@ -306,26 +309,37 @@ def spine_to_msm(
             times.append(duration)
 
         samples = [
-            sample_skeleton_at(skel, anim, t, active_skin=skin_name, fps=fps) for t in times
+            sample_skeleton_at(skel, anim, t, active_skin=skin_name, fps=fps)
+            for t in times
         ]
 
         bone_layers: list[dict] = []
         for bone in bones:
             anim_bone = (anim.get("bones", {}) or {}).get(bone.name)
+            anim_bone = (anim.get("bones", {}) or {}).get(bone.name)
             frames = []
             prev_rot: Optional[float] = None
-            for t in times:
-                pose = _local_pose(bone, anim_bone, t)
-                a, b_, c, d, e, f = _bone_local_matrix(
-                    bone,
-                    pose["x"],
-                    pose["y"],
-                    pose["rotation"],
-                    pose["scale_x"],
-                    pose["scale_y"],
-                    pose["shear_x"],
-                    pose["shear_y"],
-                )
+            for t, sample in zip(times, samples):
+                if bone.name in ik_bones:
+                    world = sample["bones"][bone.name]
+                    lm = (
+                        _mat_mul(_mat_invert(sample["bones"][bone.parent]), world)
+                        if bone.parent
+                        else world
+                    )
+                    a, b_, c, d, e, f = lm
+                else:
+                    pose = _local_pose(bone, anim_bone, t)
+                    a, b_, c, d, e, f = _bone_local_matrix(
+                        bone,
+                        pose["x"],
+                        pose["y"],
+                        pose["rotation"],
+                        pose["scale_x"],
+                        pose["scale_y"],
+                        pose["shear_x"],
+                        pose["shear_y"],
+                    )
                 (px, py), rot, (sx, sy) = _decompose_local_matrix(a, b_, c, d, e, f)
 
                 if sx < 0.0:
@@ -412,6 +426,17 @@ def spine_to_msm(
                     att_name or "",
                     getattr(att, "path", None),
                 )
+
+                if (
+                    isinstance(att, RegionAttachment)
+                    and region is not None
+                    and att.width > 0
+                    and att.height > 0
+                    and region.orig_w > 0
+                    and region.orig_h > 0
+                ):
+                    asx *= att.width / region.orig_w
+                    asy *= att.height / region.orig_h
 
                 if region is not None and not have_anchor:
                     anchor_x, anchor_y = _region_anchor(region)

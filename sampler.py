@@ -430,6 +430,151 @@ def _eval_color(
     return _parse_color(prev.get("color", "FFFFFFFF"), default)
 
 
+def _mat_invert(m: Mat2x3) -> Mat2x3:
+    a, b, c, d, e, f = m
+    det = a * d - b * c
+    if det == 0.0:
+        return (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+    inv = 1.0 / det
+    ia = d * inv
+    ib = -b * inv
+    ic = -c * inv
+    id = a * inv
+    ie = -(ia * e + ic * f)
+    if_ = -(ib * e + id * f)
+    return (ia, ib, ic, id, ie, if_)
+
+
+def _mat_apply(m: Mat2x3, x: float, y: float) -> tuple[float, float]:
+    a, b, c, d, e, f = m
+    return (a * x + c * y + e, b * x + d * y + f)
+
+
+def _world_rotation_of(m: Mat2x3) -> float:
+    a, b, _, _, _, _ = m
+    return math.degrees(math.atan2(b, a))
+
+
+def _bone_local_from_world(
+    bone: Bone,
+    parent_world: Optional[Mat2x3],
+    world: Mat2x3,
+    pose: dict[str, float],
+) -> Mat2x3:
+    if parent_world is None:
+        return world
+
+    px, py = _mat_apply(_mat_invert(parent_world), world[4], world[5])
+    parent_rot = _world_rotation_of(parent_world)
+    local_rot = _world_rotation_of(world) - parent_rot
+    return _bone_local_matrix(
+        bone,
+        px,
+        py,
+        local_rot,
+        pose["scale_x"],
+        pose["scale_y"],
+        pose["shear_x"],
+        pose["shear_y"],
+    )
+
+
+def _ik_apply(
+    ik: IKConstraint,
+    bones_by_name: dict[str, Bone],
+    world: dict[str, Mat2x3],
+    local_pose: dict[str, dict[str, float]],
+) -> None:
+    if len(ik.bones) != 2:
+        return
+
+    b0 = bones_by_name.get(ik.bones[0])
+    b1 = bones_by_name.get(ik.bones[1])
+    target_bone = bones_by_name.get(ik.target)
+    if b0 is None or b1 is None or target_bone is None:
+        return
+
+    parent_name = b0.parent
+    if parent_name is None or parent_name not in world:
+        return
+
+    parent_world = world[parent_name]
+    inv_parent = _mat_invert(parent_world)
+
+    tx, ty = _mat_apply(inv_parent, world[ik.target][4], world[ik.target][5])
+
+    bone0_origin = _mat_apply(inv_parent, world[b0.name][4], world[b0.name][5])
+
+    dx = tx - bone0_origin[0]
+    dy = ty - bone0_origin[1]
+    dist = math.hypot(dx, dy)
+
+    len0 = b0.length
+    len1 = b1.length
+    if len0 <= 0.0 or len1 <= 0.0 or dist < 1e-6:
+        return
+
+    min_dist = abs(len0 - len1)
+    max_dist = len0 + len1
+    if not ik.stretch:
+        dist = max(min_dist + 1e-6, min(max_dist - 1e-6, dist))
+
+    cos_a0 = (len0 * len0 + dist * dist - len1 * len1) / (2.0 * len0 * dist)
+    cos_a0 = max(-1.0, min(1.0, cos_a0))
+    a0 = math.acos(cos_a0)
+
+    cos_a1 = (len0 * len0 + len1 * len1 - dist * dist) / (2.0 * len0 * len1)
+    cos_a1 = max(-1.0, min(1.0, cos_a1))
+    a1 = math.acos(cos_a1)
+
+    base_angle = math.atan2(dy, dx)
+
+    if ik.bend_positive:
+        r0_local = base_angle - a0
+    else:
+        r0_local = base_angle + a0
+
+    if ik.bend_positive:
+        r1_local = r0_local + (math.pi - a1)
+    else:
+        r1_local = r0_local - (math.pi - a1)
+
+    parent_rot = _world_rotation_of(parent_world)
+    world0_deg = math.degrees(r0_local) + parent_rot
+    world1_deg = math.degrees(r1_local) + parent_rot
+
+    bone0_world_pos = (world[b0.name][4], world[b0.name][5])
+
+    p0 = local_pose[b0.name]
+    a0w = math.radians(world0_deg)
+    cos0, sin0 = math.cos(a0w), math.sin(a0w)
+    sx0, sy0 = p0["scale_x"], p0["scale_y"]
+    world[b0.name] = (
+        cos0 * sx0,
+        sin0 * sx0,
+        -sin0 * sy0,
+        cos0 * sy0,
+        bone0_world_pos[0],
+        bone0_world_pos[1],
+    )
+
+    tip_x = bone0_world_pos[0] + math.cos(a0w) * len0 * sx0
+    tip_y = bone0_world_pos[1] + math.sin(a0w) * len0 * sx0
+
+    p1 = local_pose[b1.name]
+    a1w = math.radians(world1_deg)
+    cos1, sin1 = math.cos(a1w), math.sin(a1w)
+    sx1, sy1 = p1["scale_x"], p1["scale_y"]
+    world[b1.name] = (
+        cos1 * sx1,
+        sin1 * sx1,
+        -sin1 * sy1,
+        cos1 * sy1,
+        tip_x,
+        tip_y,
+    )
+
+
 def _eval_attachment(keys: list[dict], t: float, fps: float = 30.0) -> Optional[str]:
     if not keys:
         return None
@@ -620,6 +765,10 @@ def sample_skeleton_at(
             )
         else:
             world[bone.name] = lm
+
+    if skel.ik:
+        for ik in sorted(skel.ik, key=lambda c: c.order):
+            _ik_apply(ik, bones_by_name, world, local_pose)
 
     skin = skel.skin(active_skin) if active_skin else None
     if skin is None:

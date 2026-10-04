@@ -332,7 +332,7 @@ def _read_curve(kf: dict) -> tuple[str, Optional[tuple[float, float, float, floa
 
 
 def _eval_channel(
-    keys: list[dict], field: str, t: float, default: float = 0.0
+    keys: list[dict], field: str, t: float, default: float = 0.0, wrap: bool = False
 ) -> float:
     if not keys:
         return default
@@ -355,7 +355,10 @@ def _eval_channel(
             f = (t - t0) / (t1 - t0)
             if kind == "bezier" and ctrl is not None:
                 f = _bezier_ease(f, *ctrl)
-            return v0 + (v1 - v0) * f
+            delta = v1 - v0
+            if wrap:
+                delta -= math.ceil(delta / 360.0 - 0.5) * 360.0
+            return v0 + delta * f
         prev = kf
     return float(prev.get(field, default))
 
@@ -715,7 +718,9 @@ def _local_pose(bone: Bone, anim_bone: Optional[dict], t: float) -> dict[str, fl
         return pose
 
     if "rotate" in anim_bone:
-        pose["rotation"] += _eval_channel(anim_bone["rotate"], "angle", t, 0.0)
+        pose["rotation"] += _eval_channel(
+            anim_bone["rotate"], "angle", t, 0.0, wrap=True
+        )
     if "translate" in anim_bone:
         tx, ty = _eval_xy(anim_bone["translate"], t, (0.0, 0.0))
         pose["x"] += tx

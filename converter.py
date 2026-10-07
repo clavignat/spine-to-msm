@@ -30,6 +30,7 @@ from sampler import (
     RegionAttachment,
     MeshAttachment,
     PointAttachment,
+    NORMAL
 )
 
 
@@ -310,7 +311,7 @@ def spine_to_msm(
             frames = []
             prev_rot: Optional[float] = None
             for t, sample in zip(times, samples):
-                if bone.name in ik_bones:
+                if bone.name in ik_bones or bone.transform_mode != NORMAL:
                     world = sample["bones"][bone.name]
                     lm = (
                         _mat_mul(_mat_invert(sample["bones"][bone.parent]), world)

@@ -310,6 +310,7 @@ def spine_to_msm(
             anim_bone = (anim.get("bones", {}) or {}).get(bone.name)
             frames = []
             prev_rot: Optional[float] = None
+            prev_state = None
             for t, sample in zip(times, samples):
                 if bone.name in ik_bones or bone.transform_mode != NORMAL:
                     world = sample["bones"][bone.name]
@@ -394,6 +395,7 @@ def spine_to_msm(
                 if att is None:
                     r, g, b_, a = sst["color"]
                     frames.append(make_frame(t, opacity=0.0, rgb=(r, g, b_)))
+                    prev_state = None
                     continue
 
                 r, g, b_, a = _combine_color(sst["color"], att)
@@ -435,6 +437,15 @@ def spine_to_msm(
                 if page_idx is not None:
                     src_index = page_to_src[page_idx]
 
+                if region is not None:
+                    cx, cy = _region_anchor(region)
+                    dx, dy = cx - anchor_x, cy - anchor_y
+                    if dx or dy:
+                        r = math.radians(rot)
+                        ox, oy = asx * dx, asy * dy
+                        px -= ox * math.cos(r) - oy * math.sin(r)
+                        py -= ox * math.sin(r) + oy * math.cos(r)
+
                 sprite_arg: Optional[str] = None
                 resolved_name = (
                     region.name if region else (getattr(att, "path", None) or att_name)
@@ -444,6 +455,19 @@ def spine_to_msm(
                     last_sprite = resolved_name
 
                 opacity = 100.0 * (a / 255.0)
+
+                if sprite_arg is not None and prev_state is not None:
+                    ppos, pscale, prot, pop, prgb = prev_state
+                    frames.append(
+                        make_frame(
+                            t - 1e-3,
+                            pos=ppos,
+                            scale=pscale,
+                            rotation=prot,
+                            opacity=pop,
+                            rgb=prprgb if False else prgb,
+                        )
+                    )
 
                 frames.append(
                     make_frame(
@@ -455,6 +479,13 @@ def spine_to_msm(
                         sprite=sprite_arg,
                         rgb=(r, g, b_),
                     )
+                )
+                prev_state = (
+                    (px, py),
+                    (asx * 100.0, asy * 100.0),
+                    rot,
+                    opacity,
+                    (r, g, b_),
                 )
 
             blend = SPINE_BLEND_MAP.get(slot.blend, BLEND_STANDARD)

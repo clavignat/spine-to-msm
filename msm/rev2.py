@@ -649,12 +649,7 @@ _BLEND_REV6_TO_REV2[7] = 1
 
 
 def _rgb_factor(rgb: dict | None) -> float:
-    if not rgb:
-        return 1.0
-    if int(rgb.get("immediate", IMM_UNSET)) != 0:
-        return 1.0
-    r, g, b = (int(rgb.get(k, 255)) for k in ("red", "green", "blue"))
-    return max(0.0, min(1.0, (0.299 * r + 0.587 * g + 0.114 * b) / 255.0))
+    return 1.0
 
 
 def _rev6_frame_to_rev2(
